@@ -16,6 +16,8 @@ import subprocess
 BASE = Path(__file__).resolve().parent.parent
 BASE_SHA = 'dcd4adc5fe8b0c8b45bcf5728088016c7fee3378dfd83d0d11d5cbc843f31210'
 
+NETWORK_HASHES = {'bin/busybox': '5b6175f21d7ed3d3b65a13fa752e050b87de42b93282ecee319caff33aa82f9b', 'lib/ld-linux-armhf.so.3': '977763392efa689292753f9d698ccd2587563777266398d91f42420f3487a4e2', 'lib/libc.so.6': 'ce833d90473071db1f039808a746c9f96b8962bcd620191f7b127eb33d6756c2', 'lib/libm.so.6': '56e3304fffb63a396988da9cd3b12643b3076465554a5b7fae76ce12dae2bf2c', 'lib/libresolv.so.2': '0581af919fa94996cbe13a360f3fb7bd2db2f01dde6cad27eb633a3aeac49986'}
+
 def sha(b):
     return hashlib.sha256(b).hexdigest()
 
@@ -27,6 +29,7 @@ def main():
     p.add_argument('--data-partition', help='Verified Linux partition basename, e.g. mmcblk2p4')
     p.add_argument('--ha-ip', required=True)
     p.add_argument('--base-image', type=Path, required=True)
+    p.add_argument('--network-root', type=Path, help='Extracted fw144/net directory; mandatory for a recovery base')
     a = p.parse_args()
     if a.mode == 'installed' and not re.fullmatch(r'mmcblk[0-9]+p[0-9]+', a.data_partition or ''):
         p.error('Installed mode requires --data-partition from the target device inventory')
@@ -34,6 +37,8 @@ def main():
     b = a.base_image.read_bytes()
     if sha(b) not in (BASE_SHA, '015bf20567a44062f882bb4726aae35311a41aa787ee51dba93e719067a89309'):
         raise RuntimeError('Base image hash mismatch')
+    if sha(b) != BASE_SHA and not a.network_root:
+        p.error('Recovery BusyBox lacks DHCP. Supply --network-root vendor/fw144/net from extract_firmware.py')
     out = a.out.resolve()
     out.mkdir(parents=True, exist_ok=True)
     keyfile = out/'control-key.txt'
@@ -83,6 +88,12 @@ done
     add('init', init.encode())
     add('dhcp-native.sh', (BASE/'assets/dhcp.sh').read_bytes())
     add('bin/naso_control', control.read_bytes())
+    if sha(b) != BASE_SHA:
+        for name, expected in NETWORK_HASHES.items():
+            data = (a.network_root/name).read_bytes()
+            if sha(data) != expected:
+                raise RuntimeError('Network runtime hash mismatch: '+name)
+            add(name, data)
     add('TRAILER!!!', b'', 0)
     ram = original+b'\0'*(-len(original)%4)+overlay
     hdr = bytearray(b[:page])

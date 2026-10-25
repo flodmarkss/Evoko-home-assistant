@@ -11,7 +11,7 @@ def main():
     p=argparse.ArgumentParser(description=__doc__)
     p.add_argument('--firmware',type=Path,required=True)
     p.add_argument('--out',type=Path,required=True)
-    p.add_argument('--seven-zip',type=Path,help='7-Zip executable; required for Wi-Fi module extraction')
+    p.add_argument('--seven-zip',type=Path,required=True,help='7-Zip executable with SquashFS support')
     a=p.parse_args()
     if sha(a.firmware.read_bytes()) != FIRMWARE_SHA: raise SystemExit('Not the verified firmware 144 / 92.zip. Refusing changed firmware.')
     a.out.mkdir(parents=True,exist_ok=False)
@@ -30,6 +30,14 @@ def main():
     assert sha(kernel)==KERNEL_SHA and sha(dtb)==DTB_SHA
     assert ram[:2]==b'\x1f\x8b'
     (a.out/'components.json').write_text(json.dumps(dict(kernel_sha256=sha(kernel),dtb_sha256=sha(dtb),vendor_ramdisk_sha256=sha(ram),hardware_tested=False),indent=2))
+    # Recovery BusyBox has no udhcpc/ifconfig. Overlay the vendor rootfs network
+    # BusyBox and its matching glibc libraries, as in the reference V5/V6 path.
+    net_paths=['bin/busybox','lib/ld-linux-armhf.so.3','lib/libc.so.6','lib/libm.so.6','lib/libresolv.so.2']
+    net=a.out/'net';net.mkdir()
+    subprocess.run([str(a.seven_zip.resolve()),'x',str((a.out/'rootfs.squashfs').resolve()),'-o'+str(net.resolve()),*net_paths],check=True)
+    for name in net_paths:
+        f=net/name
+        if not f.is_file() or f.read_bytes()[:4]!=b'\x7fELF':raise SystemExit('Missing/invalid network runtime '+name)
     if a.seven_zip:
         paths=['lib/modules/6.1.60/extra/'+n+'.ko' for n in ('rtw_core','rtw_usb','rtw_8723d','rtw_8723du')]
         paths+=['lib/firmware/rtw88/rtw8723d_fw.bin']

@@ -21,10 +21,10 @@ Klona/ladda ned detta repo till en egen mapp. Alla `private-build/`- och `vendor
 
 ```powershell
 python tools/extract_firmware.py --firmware C:/Downloads/92.zip --out vendor/fw144 --seven-zip "C:/Program Files/7-Zip/7z.exe"
-python tools/build_images.py --zig C:/Tools/zig/zig.exe --base-image vendor/fw144/recovery.img --out private-build --mode rescue --ha-ip YOUR_HA_IPV4
+python tools/build_images.py --zig C:/Tools/zig/zig.exe --base-image vendor/fw144/recovery.img --network-root vendor/fw144/net --out private-build --mode rescue --ha-ip YOUR_HA_IPV4
 ```
 
-7-Zip behövs för Wi-Fi-filerna i SquashFS. Utan `--seven-zip` extraheras bara grundmaterialet; komplettera Wi-Fi senare. Kontrollera att 7-Zip stöder SquashFS. Firmwareverktyget skriver endast i den **nya lokala utmappen** och kör inga leverantörsskript.
+7-Zip behövs för nätverksverktyg och Wi-Fi-filer i SquashFS. Recoveryns lilla BusyBox saknar DHCP; `net/` innehåller den större BusyBox-versionen och dess matchande bibliotek. Byggaren kräver och hashkontrollerar dessa när recovery används som bas. Kontrollera att 7-Zip stöder SquashFS. Firmwareverktyget skriver endast i den **nya lokala utmappen** och kör inga leverantörsskript.
 
 Byggaren skapar en slumpad `control-key.txt`, statisk ARM-kontrollserver och `ha-proxy-arm` för **din** HA IPv4-adress, TCP 8123. Behåll nyckeln i samma privata utmapp vid senare `installed`-bygge. Dela aldrig genererade bilder: de innehåller kontrollnyckeln.
 
@@ -128,7 +128,7 @@ Prova automatisk Firefox-återstart. Prova verklig Wi-Fi-anslutning och DHCP med
 Bygg `installed` med **samma privata nyckelutkatalog**, samma grundbild och din verifierade datapartition:
 
 ```powershell
-python tools/build_images.py --zig C:/Tools/zig/zig.exe --base-image vendor/fw144/recovery.img --out private-build --mode installed --data-partition YOUR_DATA_PARTITION_BASENAME --ha-ip YOUR_HA_IPV4
+python tools/build_images.py --zig C:/Tools/zig/zig.exe --base-image vendor/fw144/recovery.img --network-root vendor/fw144/net --out private-build --mode installed --data-partition YOUR_DATA_PARTITION_BASENAME --ha-ip YOUR_HA_IPV4
 ```
 
 Exempel på databasnamn är `mmcblk2p4`. RAM-boota den nya installed-bilden först och bekräfta samma diskroot/startkedja. Installerat läge monterar data rw, så detta är inte längre ett helt skrivfritt rescue-test.
