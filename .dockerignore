@@ -1,0 +1,6 @@
+*
+!Dockerfile
+!assets/
+!assets/**
+!sources/
+!sources/**

@@ -1,0 +1,16 @@
+name: Source and privacy checks
+on: [push, pull_request]
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: python -m unittest discover -s tests -v
+      - run: python -m compileall -q tools tests
+      - run: for f in assets/*.sh; do sh -n "$f"; done
+      - run: sudo apt-get update && sudo apt-get install -y libx11-dev
+      - run: cc -Wall -Wextra -fsyntax-only sources/keyboard-toggle.c && cc -Wall -Wextra -fsyntax-only sources/auto-dim.c
+      - run: cc -DHA_IPV4='"192.0.2.10"' -fsyntax-only sources/ha-proxy.c && cc -DCONTROL_KEY='"ci-test-only-not-a-real-key"' -fsyntax-only sources/ram-control.c

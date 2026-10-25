@@ -1,0 +1,21 @@
+# Never commit generated images, credentials or browser state.
+private-build/
+build/
+vendor/
+*.img
+*.ko
+*.apk
+*.tar
+*.tar.gz
+*.zip
+*.sqlite*
+*.db
+*.pem
+*key.txt
+*key.h
+__pycache__/
+.env
+firefox/
+profiles/
+backups/
+naso.conf

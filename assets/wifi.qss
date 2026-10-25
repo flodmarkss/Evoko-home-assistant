@@ -1,0 +1,17 @@
+QWidget { background-color: #17191b; color: #eeeeee; font-size: 14px; }
+QLineEdit, QComboBox, QTreeWidget, QListWidget, QTextEdit {
+ background-color: #25282b; border: 1px solid #555b60; selection-background-color: #006979;
+ selection-color: white; padding: 2px;
+}
+QPushButton { background-color: #006070; border: 1px solid #36818b; border-radius: 4px; padding: 4px 10px; min-height: 23px; }
+QPushButton:hover { background-color: #087c8c; }
+QPushButton:pressed { background-color: #004451; }
+QWidget:disabled { color: #85898b; }
+QHeaderView::section, QTabBar::tab { background-color: #292d30; color: white; padding: 5px; }
+QTabBar::tab:selected { background-color: #006070; }
+QMenu::item:selected { background-color: #006070; }
+QGroupBox { border: 1px solid #454b50; margin-top: 10px; padding-top: 7px; }
+QGroupBox::title { subcontrol-origin: margin; left: 8px; }
+/* Unused WEP fields otherwise consume space needed by the touch keyboard. */
+QGroupBox#wepBox:disabled { min-height: 0px; max-height: 0px; margin: 0px; padding: 0px; border: none; }
+QGroupBox#wepBox:disabled * { min-height: 0px; max-height: 0px; margin: 0px; padding: 0px; }
