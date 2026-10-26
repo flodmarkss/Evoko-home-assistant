@@ -27,13 +27,13 @@ def main():
     digest = hashlib.sha256(data).hexdigest()
     if len(data)>2*1024*1024:
         raise ValueError('Only small bootstrap helpers are allowed')
-    state = run('''set -e
+    state = run(re.sub(r'\bTARGET\b',target,'''set -e
 B=/bin/busybox
 $B mkdir -p /tmp/naso-bootstrap
 [ "$($B readlink -f /tmp/naso-bootstrap)" = /tmp/naso-bootstrap ]
 [ ! -L TARGET ]
 if [ -e TARGET ]; then $B sha256sum TARGET; else echo NEW_TARGET; fi
-'''.replace('TARGET',target))
+'''))
     if not state.startswith(digest):
         if 'NEW_TARGET' not in state:
             raise RuntimeError('Existing target differs; preserved')
