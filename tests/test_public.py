@@ -3,11 +3,38 @@ import subprocess
 import sys
 import tempfile
 import unittest
+import contextlib
+import hashlib
+import io
+import re
+from unittest.mock import patch
 from pathlib import Path
 
 ROOT=Path(__file__).resolve().parents[1]
 
 class PublicDistributionTests(unittest.TestCase):
+    def test_ram_upload_preserves_new_target_marker(self):
+        sys.path.insert(0,str(ROOT/'tools'))
+        spec=importlib.util.spec_from_file_location('ram_upload_under_test',ROOT/'tools/upload_ram_file.py')
+        upload=importlib.util.module_from_spec(spec);spec.loader.exec_module(upload)
+        calls=[]
+        with tempfile.TemporaryDirectory() as tmp:
+            helper=Path(tmp)/'test-helper';helper.write_bytes(b'harmless RAM helper')
+            digest=hashlib.sha256(helper.read_bytes()).hexdigest()
+            @contextlib.contextmanager
+            def transport(host,key,script,timeout=60):
+                calls.append(script)
+                if 'cat /proc/cmdline' in script:data=b'androidboot.serialno=TEST_PANEL\n'
+                elif 'else echo' in script:
+                    # Simulate the shell's actual marker, not an assumed response.
+                    data=(re.search(r'else echo ([^;]+);',script).group(1)+'\n').encode()
+                elif 'sha256sum /tmp/naso-bootstrap/test-helper' in script:data=(digest+'  /tmp/naso-bootstrap/test-helper\n').encode()
+                else:data=b''
+                yield io.BytesIO(data)
+            args=['upload_ram_file.py','--host','192.0.2.2','--key-file','unused-private-key','--serial','TEST_PANEL','--file',str(helper)]
+            with patch.object(upload,'execute',transport),patch.object(sys,'argv',args),contextlib.redirect_stdout(io.StringIO()):upload.main()
+        self.assertTrue(any('base64 -d >> /tmp/naso-bootstrap/test-helper' in s for s in calls))
+
     def test_no_session_or_key_files(self):
         forbidden={'cookies.sqlite','logins.json','key4.db','cert9.db','webappsstore.sqlite','control-key.txt','backup-key.txt','naso.conf'}
         for p in ROOT.rglob('*'):
